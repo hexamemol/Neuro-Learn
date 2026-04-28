@@ -172,8 +172,7 @@ function startVoice() {
     }
 }
 
-
-
+// Typewriter function correctly defined
 async function typewriter(element, text, signal) {
     element.innerHTML = "🧠 AI: "; 
     const words = text.split(/\s+/);
@@ -186,20 +185,31 @@ async function typewriter(element, text, signal) {
     }
 }
 
+// Send function with small 'a' in async and proper variable handling
 async function send() {
   const chat = document.getElementById("chat");
+  const inputEl = document.getElementById("input"); // Direct element access
   const val = inputEl.value.trim();
   const pauseBtn = document.getElementById('pause-btn');
   
   let signal = null;
-  if (typeof initializeAIStream === 'function') { signal = initializeAIStream(); }
+  // Safety check for pause-handler
+  if (typeof initializeAIStream === 'function') { 
+      signal = initializeAIStream(); 
+  }
 
-  if (!val || typeof MY_GROQ_KEY === 'undefined') return;
+  // Check if val exists and API key is loaded
+  if (!val || typeof MY_GROQ_KEY === 'undefined') {
+      console.log("Input empty or API key missing");
+      return;
+  }
 
+  // 1. Show User Message
   chat.innerHTML += `<div class="msg user">👤 You: ${val}</div>`;
   inputEl.value = "";
   if(pauseBtn) pauseBtn.style.display = 'flex';
 
+  // 2. Create Thinking Bubble
   const thinkingId = "think-" + Date.now();
   chat.innerHTML += `<div class="msg bot" id="${thinkingId}">🧠 AI: <span id="status-${thinkingId}">Thinking...</span></div>`;
   const botMsg = document.getElementById(thinkingId);
@@ -207,27 +217,26 @@ async function send() {
   chat.scrollTop = chat.scrollHeight;
 
   try {
-    // REMOVED "Connecting to Hexamemol" text
-    await new Promise(r => setTimeout(r, 600)); 
-    if (statusSpan) statusSpan.innerText = "Accessing knowledge base...";
-    await new Promise(r => setTimeout(r, 800));
-    if (statusSpan) statusSpan.innerText = "Processing response...";
+    // Artificial delays for status updates
+    await new Promise(r => setTimeout(r, 400)); 
+    if (statusSpan) statusSpan.innerText = "Accessing knowledge...";
     await new Promise(r => setTimeout(r, 400));
+    if (statusSpan) statusSpan.innerText = "Processing...";
 
+    // 3. API Call
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: { "Authorization": `Bearer ${MY_GROQ_KEY}`, "Content-Type": "application/json" },
+      headers: { 
+          "Authorization": "Bearer " + MY_GROQ_KEY, 
+          "Content-Type": "application/json" 
+      },
       signal: signal,
       body: JSON.stringify({
         model: "llama-3.1-8b-instant",
         messages: [
             { 
               role: "system", 
-              content: `You are Neuro Learn AI.
-              - If asked 'Who are you?', answer: 'I am Neuro Learn AI.'
-              - If asked about your company, say: 'I am part of Hexamemol AI Corporation.'
-              - If asked who developed you, say: 'I am Developed by Bilal Haider | Student & Entrepreneur from Pakistan.'
-              - Keep all academic answers under 4 lines.` 
+              content: "You are Neuro Learn AI. Developed by Bilal Haider. Keep answers under 4 lines." 
             }, 
             { role: "user", content: val }
         ]
@@ -235,17 +244,28 @@ async function send() {
     });
 
     const data = await response.json();
-    const aiResult = data.choices[0].message.content;
-    await typewriter(botMsg, aiResult, signal);
+    
+    if (data.choices && data.choices[0]) {
+        const aiResult = data.choices[0].message.content;
+        // Status span ko saaf karke typewriter chalana
+        botMsg.innerHTML = "🧠 AI: ";
+        await typewriter(botMsg, aiResult, signal);
+    } else {
+        throw new Error("Invalid response from API");
+    }
 
   } catch (e) {
     if (e.name === 'AbortError') {
       botMsg.innerHTML += " <span style='color:#ef4444; font-weight:bold;'>[STOPPED]</span>";
+    } else {
+      console.error(e);
+      botMsg.innerHTML = "🧠 AI: Something went wrong. Check your API key or connection.";
     }
   } finally {
     if(pauseBtn) pauseBtn.style.display = 'none';
   }
-}
+ }
+   
 
 function quick(t) { inputEl.value = "Explain " + t + " basics."; send(); }
 </script>
