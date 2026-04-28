@@ -205,7 +205,9 @@ function typeEffect(element, text) {
 async function send() {
   const chat = document.getElementById("chat");
   const val = inputEl.value.trim();
-  if (!val || typeof MY_GROQ_KEY === 'undefined') return;
+  
+ if (!val || typeof MY_GROQ_KEY === 'undefined') return;
+ 
 
   chat.innerHTML += `<div class="msg user">👤 You: ${val}</div>`;
   inputEl.value = "";
