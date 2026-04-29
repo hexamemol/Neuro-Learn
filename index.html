@@ -172,116 +172,82 @@ function startVoice() {
     }
 }
 
-// Typewriter function correctly defined
- // 1. The Typewriter Function (Corrected Variable Names)
+
+
 async function typewriter(element, text, signal) {
-    element.innerHTML = "🧠 AI: "; // Reset from "Thinking..."
+    element.innerHTML = "🧠 AI: "; 
     const words = text.split(/\s+/);
-    
     for (let i = 0; i < words.length; i++) {
-        // Stop typing if user clicks 'Pause'
         if (signal && signal.aborted) break;
-        
         element.innerHTML += words[i] + " "; 
-        
-        // Auto-scroll as text grows
         const chat = document.getElementById("chat");
-        if (chat) chat.scrollTop = chat.scrollHeight;
-        
-        // Speed control (45ms per word)
+        chat.scrollTop = chat.scrollHeight;
         await new Promise(r => setTimeout(r, 45)); 
     }
 }
 
-// 2. Global UI References
-const inputEl = document.getElementById("input");
-const chat = document.getElementById("chat");
-const pauseBtn = document.getElementById('pause-btn');
-
-// 3. Main Send Function
 async function send() {
-    const val = inputEl.value.trim();
-    
-    let signal = null;
-    // Connect to your existing AbortController logic
-    if (typeof initializeAIStream === 'function') { 
-        signal = initializeAIStream(); 
+  const chat = document.getElementById("chat");
+  const val = inputEl.value.trim();
+  const pauseBtn = document.getElementById('pause-btn');
+  
+  let signal = null;
+  if (typeof initializeAIStream === 'function') { signal = initializeAIStream(); }
+
+  if (!val || typeof MY_GROQ_KEY === 'undefined') return;
+
+  chat.innerHTML += `<div class="msg user">👤 You: ${val}</div>`;
+  inputEl.value = "";
+  if(pauseBtn) pauseBtn.style.display = 'flex';
+
+  const thinkingId = "think-" + Date.now();
+  chat.innerHTML += `<div class="msg bot" id="${thinkingId}">🧠 AI: <span id="status-${thinkingId}">Thinking...</span></div>`;
+  const botMsg = document.getElementById(thinkingId);
+  const statusSpan = document.getElementById(`status-${thinkingId}`);
+  chat.scrollTop = chat.scrollHeight;
+
+  try {
+    // REMOVED "Connecting to Hexamemol" text
+    await new Promise(r => setTimeout(r, 600)); 
+    if (statusSpan) statusSpan.innerText = "Accessing knowledge base...";
+    await new Promise(r => setTimeout(r, 800));
+    if (statusSpan) statusSpan.innerText = "Processing response...";
+    await new Promise(r => setTimeout(r, 400));
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${MY_GROQ_KEY}`, "Content-Type": "application/json" },
+      signal: signal,
+      body: JSON.stringify({
+        model: "llama-3.1-8b-instant",
+        messages: [
+            { 
+              role: "system", 
+              content: `You are Neuro Learn AI.
+              - If asked 'Who are you?', answer: 'I am Neuro Learn AI.'
+              - If asked about your company, say: 'I am part of Hexamemol AI Corporation.'
+              - If asked who developed you, say: 'I am Developed by Bilal Haider | Student & Entrepreneur from Pakistan.'
+              - Keep all academic answers under 4 lines.` 
+            }, 
+            { role: "user", content: val }
+        ]
+      })
+    });
+
+    const data = await response.json();
+    const aiResult = data.choices[0].message.content;
+    await typewriter(botMsg, aiResult, signal);
+
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      botMsg.innerHTML += " <span style='color:#ef4444; font-weight:bold;'>[STOPPED]</span>";
     }
-
-    // Safety check
-    if (!val || typeof MY_GROQ_KEY === 'undefined') {
-        console.warn("Input empty or MY_GROQ_KEY missing");
-        return;
-    }
-
-    // UI Updates
-    chat.innerHTML += `<div class="msg user">👤 You: ${val}</div>`;
-    inputEl.value = "";
-    if(pauseBtn) pauseBtn.style.display = 'flex';
-
-    const thinkingId = "think-" + Date.now();
-    chat.innerHTML += `<div class="msg bot" id="${thinkingId}">🧠 AI: <span id="status-${thinkingId}">Thinking...</span></div>`;
-    
-    const botMsg = document.getElementById(thinkingId);
-    const statusSpan = document.getElementById(`status-${thinkingId}`);
-    chat.scrollTop = chat.scrollHeight;
-
-    try {
-        // Artificial progress steps
-        await new Promise(r => setTimeout(r, 400)); 
-        if (statusSpan) statusSpan.innerText = "Accessing knowledge...";
-        await new Promise(r => setTimeout(r, 400));
-        if (statusSpan) statusSpan.innerText = "Processing...";
-
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: { 
-                "Authorization": "Bearer " + MY_GROQ_KEY, 
-                "Content-Type": "application/json" 
-            },
-            signal: signal,
-            body: JSON.stringify({
-                model: "llama-3.1-8b-instant",
-                messages: [
-                    { role: "system", content: "You are Neuro Learn AI. Developed by Bilal Haider. Keep answers under 4 lines." }, 
-                    { role: "user", content: val }
-                ]
-            })
-        });
-
-        const data = await response.json();
-        
-        if (data.choices && data.choices[0]) {
-            const aiResult = data.choices[0].message.content;
-            // Launch the typewriter
-            await typewriter(botMsg, aiResult, signal);
-        } else {
-            throw new Error("API Limit or Error");
-        }
-
-    } catch (e) {
-        if (e.name === 'AbortError') {
-            botMsg.innerHTML += " <span style='color:#ef4444; font-weight:bold;'>[STOPPED]</span>";
-        } else {
-            console.error("Groq Error:", e);
-            botMsg.innerHTML = "🧠 AI: Error connecting to Groq. Check your API key.";
-        }
-    } finally {
-        if(pauseBtn) pauseBtn.style.display = 'none';
-        chat.scrollTop = chat.scrollHeight;
-    }
+  } finally {
+    if(pauseBtn) pauseBtn.style.display = 'none';
+  }
 }
 
-// 4. Shortcut Function
-function quick(t) { 
-    if (inputEl) {
-        inputEl.value = "Explain " + t + " basics."; 
-        send(); 
-    }
- }
- 
- 
-
+function quick(t) { inputEl.value = "Explain " + t + " basics."; send(); }
 </script>
 </body>
 </html>
