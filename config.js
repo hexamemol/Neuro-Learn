@@ -1,4 +1,4 @@
-alert("Config file loaded!");
+
 const MY_GROQ_KEY = "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";
 
 
