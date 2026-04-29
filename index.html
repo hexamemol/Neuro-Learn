@@ -222,12 +222,10 @@ async function send() {
         model: "llama-3.1-8b-instant",
         messages: [
             { 
-              role: "system", 
-              content: `You are Neuro Learn AI, a helpful academic assistant developed by Bilal Haider (Hexamemol AI Corporation). 
-- Only mention your identity or developer if the user specifically asks for it. 
-- Otherwise, focus on answering the user's academic questions.
-- Keep all answers under 4 lines.`
- `You are Neuro Learn AI.
+             role: "system", 
+              content: "You are Neuro Learn AI, a helpful academic assistant developed by Bilal Haider (Hexamemol AI Corporation). Only mention your identity or developer if specifically asked. Keep all answers under 4 lines." 
+            }, 
+
             }, 
             { role: "user", content: val }
         ]
