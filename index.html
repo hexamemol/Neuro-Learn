@@ -192,6 +192,7 @@ async function typewriter(element, text, signal) {
 }
 
 async function send() {
+ const apiKey = process.env.GROQ_API_KEY;
   const chat = document.getElementById("chat");
   const val = inputEl.value.trim();
   const pauseBtn = document.getElementById('pause-btn');
